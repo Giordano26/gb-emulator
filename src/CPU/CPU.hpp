@@ -15,13 +15,22 @@ private:
     uint16_t pc;
 
     void setZeroFlag(bool state);
+    bool getZeroFlag();
+
     void setSubtractFlag(bool state);
+    bool getSubtractFlag();
+
     void setHalfCarryFlag(bool state);
+    bool getHalfCarryFlag();
+
     void setCarryFlag(bool state);
     bool getCarryFlag();
+
     uint16_t getNextd16();
+
     void inc8(uint8_t& reg);
     void dec8(uint8_t& reg);
+
     void addHL16(uint16_t& firstPair, uint16_t& secondPair);
 
 

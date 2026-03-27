@@ -14,7 +14,7 @@ uint16_t CPU::getAF(){
 
 void CPU::setAF(uint16_t value){
     this->a = (value >> 8) & 0xFF;
-    this->f = value & 0xFF;
+    this->f = value & 0xF0;
 }
 
 uint16_t CPU::getBC(){
@@ -74,6 +74,10 @@ void CPU::setZeroFlag(bool state){
     this->f = this->f & ~(1 << 7);
 }
 
+bool CPU::getZeroFlag(){
+    return (this->f & (1 << 7)) != 0;
+}
+
 void CPU::setSubtractFlag(bool state){
     if(state){
         this->f = this->f | (1 << 6);
@@ -83,6 +87,10 @@ void CPU::setSubtractFlag(bool state){
     this->f = this->f & ~(1 << 6);
 }
 
+bool CPU::getSubtractFlag(){
+    return (this->f & (1 << 6)) != 0;
+}
+
 void CPU::setHalfCarryFlag(bool state){
     if(state){
         this->f = this->f | (1 << 5);
@@ -90,6 +98,10 @@ void CPU::setHalfCarryFlag(bool state){
     }
 
     this->f = this->f & ~(1 << 5);
+}
+
+bool CPU::getHalfCarryFlag(){
+    return (this->f & (1 << 5)) != 0;
 }
 
 void CPU::setCarryFlag(bool state){
@@ -156,8 +168,7 @@ void CPU::decode(uint8_t opCode){
         }
 
         case 0x03: {
-            uint16_t bc = getBC();
-            this->setBC(bc + 1);
+            this->setBC(this->getBC() + 1);
             break;
         }
 
@@ -191,12 +202,7 @@ void CPU::decode(uint8_t opCode){
         }
 
         case 0x08: {
-            uint16_t address = getNextd16();
-            uint8_t lowByte = this->sp & 0xFF;
-            uint8_t highByte = (this->sp >> 8) & 0xFF;
-
-            this->mmu->write(address, lowByte);
-            this->mmu->write(address + 1, highByte);
+            this->mmu->write16(getNextd16(),this->pc);
             break;
         }
 
@@ -214,8 +220,7 @@ void CPU::decode(uint8_t opCode){
         }
 
         case 0x0B : {
-            uint16_t bc = this->getBC();
-            this->setBC(bc - 1);
+            this->setBC(this->getBC() - 1);
             break;
         }
 
@@ -265,8 +270,7 @@ void CPU::decode(uint8_t opCode){
         }
 
         case 0x13: {
-            uint16_t de = this->getDE();
-            this->setDE(de + 1);
+            this->setDE(this->getDE() + 1);
             break;
         }
 
@@ -321,8 +325,7 @@ void CPU::decode(uint8_t opCode){
         }
 
         case 0x1B: {
-            uint16_t de = getDE();
-            this->setDE(de - 1);
+            this->setDE(this->getDE() - 1);
             break;
         }
 
@@ -356,8 +359,126 @@ void CPU::decode(uint8_t opCode){
             break;
         }
 
+        case 0x20: {
+            int8_t offset = (int8_t)this->getNextByte();
+
+            if(!this->getZeroFlag()){
+                this->pc += offset;
+            }
+
+            break;
+        }
+
         case 0x21: {
             this->setHL(getNextd16());
+            break;
+        }
+
+        case 0x22: {
+            this->mmu->write(this->getHL(), this->a);
+            this->setHL(this->getHL() + 1);
+            break;
+        }
+
+        case 0x23: {
+            this->setHL(this->getHL() + 1);
+            break;
+        }
+
+        case 0x24: {
+            this->inc8(this->h);
+            break;
+        }
+
+        case 0x25: {
+            this->dec8(this->h);
+            break;
+        }
+
+        case 0x26: {
+            this->h = getNextByte();
+            break;
+        }
+
+        case 0x27: {
+            uint8_t offSet = 0x00;
+            bool shouldCarry = false;
+
+            bool lastWasADD = !getSubtractFlag();
+            bool carry = getCarryFlag();
+            bool halfCarry = getHalfCarryFlag();
+
+           if(carry || (lastWasADD && this->a > 0x99)){
+               offSet = offSet | 0x60;
+               shouldCarry = true;
+           }
+
+           if(halfCarry || (lastWasADD && (this->a & 0x0F) > 0x09)){
+               offSet = offSet | 0x06;
+           }
+
+           if(lastWasADD){
+               this->a += offSet;
+           } else {
+               this->a -= offSet;
+           }
+
+            this->setZeroFlag(this->a == 0x00);
+            this->setHalfCarryFlag(false);
+            this->setCarryFlag(shouldCarry);
+
+            break;
+        }
+
+        case 0x28: {
+            int8_t offset = (int8_t)this->getNextByte();
+
+            if(getZeroFlag()){
+                this->pc += offset;
+            }
+
+            break;
+        }
+
+        case 0x29: {
+            uint16_t hl = getHL();
+            this->addHL16(hl, hl);
+            break;
+        }
+
+        case 0x2A: {
+            this->a = this->mmu->read(this->getHL());
+
+            this->setHL(this->getHL() + 1);
+
+            break;
+        }
+
+        case 0x2B: {
+            this->setHL(this->getHL() - 1);
+            break;
+        }
+
+        case 0x2C: {
+            this->inc8(this->l);
+            break;
+        }
+
+        case 0x2D: {
+            this->dec8(this->l);
+            break;
+        }
+
+        case 0x2E: {
+            this->l = this->getNextByte();
+            break;
+        }
+
+        case 0x2F: {
+            this->a = ~this->a;
+
+            this->setSubtractFlag(true);
+            this->setHalfCarryFlag(true);
             break;
         }
 
