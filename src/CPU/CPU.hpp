@@ -1,6 +1,7 @@
 #pragma once
 #include "MMU/MMU.hpp"
 #include <cstdint>
+#include <sys/types.h>
 
 class CPU {
 private:
@@ -33,7 +34,11 @@ private:
     void inc8(uint8_t& reg);
     void dec8(uint8_t& reg);
 
-    void addHL16(uint16_t& firstPair, uint16_t& secondPair);
+    void addHL16(uint16_t& firstPair, uint16_t secondPair);
+    void add8(uint8_t& firstReg, uint8_t secondReg);
+    void adc8(uint8_t& firstReg, uint8_t secondReg);
+    void sub8(uint8_t& firstReg, uint8_t secondReg);
+    void sbc8(uint8_t& firstReg, uint8_t secondReg);
 
 
 public:

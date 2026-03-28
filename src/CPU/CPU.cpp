@@ -145,7 +145,7 @@ void CPU::dec8(uint8_t& reg){
     this->setSubtractFlag(true);
 }
 
-void CPU::addHL16(uint16_t& firstPair, uint16_t& secondPair){
+void CPU::addHL16(uint16_t& firstPair, uint16_t secondPair){
     this->setHalfCarryFlag((((firstPair & 0x0FFF) + (secondPair & 0x0FFF)) > 0x0FFF));
 
     uint32_t pairSum = firstPair + secondPair;
@@ -155,6 +155,53 @@ void CPU::addHL16(uint16_t& firstPair, uint16_t& secondPair){
 
     setHL(pairSum & 0xFFFF);
 }
+
+void CPU::add8(uint8_t& firstReg, uint8_t secondReg){
+    uint16_t sum = firstReg + secondReg;
+
+    this->setHalfCarryFlag(((firstReg & 0x0F) + (secondReg & 0x0F)) > 0x0F);
+    this->setCarryFlag(sum > 0xFF);
+    this->setSubtractFlag(false);
+    this->setZeroFlag((sum & 0xFF) == 0x00);
+
+    firstReg = sum & 0xFF;
+}
+
+void CPU::sub8(uint8_t& firstReg, uint8_t secondReg){
+    uint16_t sub = firstReg - secondReg;
+
+    this->setHalfCarryFlag((firstReg & 0x0F) < (secondReg & 0x0F));
+    this->setCarryFlag(firstReg < secondReg);
+    this->setSubtractFlag(true);
+    this->setZeroFlag((sub & 0xFF) == 0x00);
+
+    firstReg = sub & 0xFF;
+}
+
+void CPU::adc8(uint8_t& firstReg, uint8_t secondReg){
+    uint8_t carry = this->getCarryFlag() ? 1 : 0;
+    uint16_t sum = firstReg + secondReg + carry;
+
+    this->setHalfCarryFlag(((firstReg & 0x0F) + (secondReg & 0x0F) + carry) > 0x0F);
+    this->setCarryFlag(sum > 0xFF);
+    this->setSubtractFlag(false);
+    this->setZeroFlag((sum & 0xFF) == 0x00);
+
+    firstReg = sum & 0xFF;
+}
+
+void CPU::sbc8(uint8_t& firstReg, uint8_t secondReg){
+    uint8_t carry = this->getCarryFlag() ? 1 : 0;
+    uint16_t sub = firstReg - secondReg - carry;
+
+    this->setHalfCarryFlag((firstReg & 0x0F) < ((secondReg & 0x0F) + carry));
+    this->setCarryFlag((uint16_t)firstReg < ((uint16_t)secondReg + carry));
+    this->setSubtractFlag(true);
+    this->setZeroFlag((sub & 0xFF) == 0x00);
+
+    firstReg = sub & 0xFF;
+}
+
 
 void CPU::decode(uint8_t opCode){
     switch (opCode) {
@@ -924,6 +971,88 @@ void CPU::decode(uint8_t opCode){
 
         case 0x7F: {
             this->a = this->a;
+            break;
+        }
+
+        case 0x80:{
+            this->add8(this->a, this->b);
+            break;
+        }
+
+        case 0x81: {
+            this->add8(this->a, this->c);
+            break;
+        }
+
+        case 0x82: {
+            this->add8(this->a, this->d);
+            break;
+        }
+
+        case 0x83: {
+            this->add8(this->a, this->e);
+            break;
+        }
+
+        case 0x84: {
+            this->add8(this->a, this->h);
+            break;
+        }
+
+        case 0x85: {
+            this->add8(this->a, this->l);
+            break;
+        }
+
+        case 0x86: {
+            uint8_t hlValue = this->mmu->read(this->getHL());
+            this->add8(this->a, hlValue);
+            break;
+        }
+
+        case 0x87: {
+            this->add8(this->a, this->a);
+            break;
+        }
+
+        case 0x88: {
+            this->adc8(this->a, this->b);
+            break;
+        }
+
+        case 0x89: {
+            this->adc8(this->a, this->c);
+            break;
+        }
+
+        case 0x8A: {
+            this->adc8(this->a, this->d);
+            break;
+        }
+
+        case 0x8B: {
+            this->adc8(this->a, this->e);
+            break;
+        }
+
+        case 0x8C: {
+            this->adc8(this->a, this->h);
+            break;
+        }
+
+        case 0x8D: {
+            this->adc8(this->a, this->l);
+            break;
+        }
+
+        case 0x8E: {
+            uint8_t hlValue = this->mmu->read(this->getHL());
+            this->adc8(this->a, hlValue);
+            break;
+        }
+
+        case 0x8F: {
+            this->adc8(this->a, this->a);
             break;
         }
 
