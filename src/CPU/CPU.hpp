@@ -14,6 +14,8 @@ private:
     uint16_t sp;
     uint16_t pc;
 
+    bool isHalted;
+
     void setZeroFlag(bool state);
     bool getZeroFlag();
 
