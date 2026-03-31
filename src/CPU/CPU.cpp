@@ -8,6 +8,7 @@
 
 CPU::CPU(MMU* mmuPtr): mmu(mmuPtr){
     this->isHalted = false;
+    this->ime = false;
 }
 
 uint16_t CPU::getAF(){
@@ -202,6 +203,172 @@ void CPU::sbc8(uint8_t& firstReg, uint8_t secondReg){
     firstReg = sub & 0xFF;
 }
 
+void CPU::and8(uint8_t& firstReg, uint8_t secondReg){
+    firstReg = firstReg & secondReg;
+
+    this->setZeroFlag(firstReg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(true);
+    this->setCarryFlag(false);
+
+}
+
+void CPU::xor8(uint8_t& firstReg, uint8_t secondReg){
+    firstReg = firstReg ^ secondReg;
+
+    this->setZeroFlag(firstReg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+    this->setCarryFlag(false);
+
+}
+
+void CPU::or8(uint8_t& firstReg, uint8_t secondReg){
+    firstReg = firstReg | secondReg;
+
+    this->setZeroFlag(firstReg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+    this->setCarryFlag(false);
+
+}
+
+void CPU::cp8(uint8_t firstReg, uint8_t secondReg){
+    uint16_t sub = firstReg - secondReg;
+
+    this->setHalfCarryFlag((firstReg & 0x0F) < (secondReg & 0x0F));
+    this->setCarryFlag(firstReg < secondReg);
+    this->setSubtractFlag(true);
+    this->setZeroFlag((sub & 0xFF) == 0x00);
+}
+
+
+uint16_t CPU::pop(){
+    uint8_t low = this->mmu->read(this->sp);
+    this->sp++;
+
+    uint8_t high = this->mmu->read(this->sp);
+    this->sp++;
+
+    return (high << 8) | low;
+}
+
+void CPU::push(uint16_t value){
+    this->sp--;
+    this->mmu->write(this->sp, (value >> 8) & 0xFF);
+
+    this->sp--;
+    this->mmu->write(this->sp, value & 0xFF);
+}
+
+void CPU::rst(uint16_t address){
+    this->push(this->pc);
+
+    this->pc = address;
+}
+
+void CPU::rlc(uint8_t& reg){
+    uint8_t bit7 = (reg >> 7) & 0x01;
+
+    reg = (reg << 1) | bit7;
+
+    this->setCarryFlag(bit7);
+    this->setZeroFlag(reg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::rrc(uint8_t& reg){
+    uint8_t bit0 = reg & 0x01;
+
+    this->setCarryFlag(bit0);
+
+    reg = (reg >> 1) | (bit0 << 7);
+
+    this->setZeroFlag(reg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::rl(uint8_t& reg){
+    uint8_t carry = this->getCarryFlag() ? 1 : 0;
+    uint8_t bit7 = (reg >> 7) & 0x01;
+
+    this->setCarryFlag(bit7);
+
+    reg = (reg << 1) | carry;
+
+    this->setZeroFlag(reg  == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::rr(uint8_t& reg){
+    uint8_t carry = this->getCarryFlag() ? 1 : 0;
+    uint8_t bit0 = reg & 0x01;
+
+    this->setCarryFlag(bit0);
+
+    reg = (reg >> 1) | (carry << 7);
+
+    this->setZeroFlag(reg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::sla(uint8_t& reg){
+    uint8_t bit7 = (reg >> 7) & 0x01;
+    this->setCarryFlag(bit7);
+
+    reg = reg << 1;
+
+    this->setZeroFlag(reg  == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::sra(uint8_t& reg){
+    uint8_t bit0 = reg & 0x01;
+    uint8_t bit7 = reg & 0x80;
+
+    this->setCarryFlag(bit0);
+
+    reg = (reg >> 1) | bit7;
+
+    this->setZeroFlag(reg  == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::swap(uint8_t& reg) {
+    reg = ((reg & 0x0F) << 4) | ((reg & 0xF0) >> 4);
+
+    this->setZeroFlag(reg == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+    this->setCarryFlag(false);
+}
+
+void CPU::srl(uint8_t& reg){
+    uint8_t bit0 = reg & 0x01;
+
+    this->setCarryFlag(bit0);
+
+    reg = reg >> 1;
+
+    this->setZeroFlag(reg  == 0x00);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(false);
+}
+
+void CPU::bit(uint8_t bitPosition, uint8_t reg){
+
+    uint8_t bitValue = reg & (1 << bitPosition);
+
+    this->setZeroFlag(bitValue == 0);
+    this->setSubtractFlag(false);
+    this->setHalfCarryFlag(true);
+}
 
 void CPU::decode(uint8_t opCode){
     switch (opCode) {
@@ -246,14 +413,14 @@ void CPU::decode(uint8_t opCode){
 
             this->a = this->a | bit7;
 
-            setZeroFlag(false);
-            setSubtractFlag(false);
-            setHalfCarryFlag(false);
+            this->setZeroFlag(false);
+            this->setSubtractFlag(false);
+            this->setHalfCarryFlag(false);
             break;
         }
 
         case 0x08: {
-            this->mmu->write16(getNextd16(),this->pc);
+            this->mmu->write16(getNextd16(),this->sp);
             break;
         }
 
@@ -1056,12 +1223,268 @@ void CPU::decode(uint8_t opCode){
             break;
         }
 
+        case 0x90: {
+            this->sub8(this->a, this->b);
+            break;
+        }
+
+        case 0x91: {
+            this->sub8(this->a, this->c);
+            break;
+        }
+
+        case 0x92: {
+            this->sub8(this->a, this->d);
+            break;
+        }
+
+        case 0x93: {
+            this->sub8(this->a, this->e);
+            break;
+        }
+
+        case 0x94: {
+            this->sub8(this->a, this->h);
+            break;
+        }
+
+        case 0x95: {
+            this->sub8(this->a, this->l);
+            break;
+        }
+
+        case 0x96: {
+             uint8_t hlValue = this->mmu->read(this->getHL());
+            this->sub8(this->a, hlValue);
+            break;
+        }
+
+        case 0x97: {
+            this->sub8(this->a, this->a);
+            break;
+        }
+
+        case 0x98: {
+            this->sbc8(this->a, this->b);
+            break;
+        }
+
+        case 0x99: {
+            this->sbc8(this->a, this->c);
+            break;
+        }
+
+        case 0x9A: {
+            this->sbc8(this->a, this->d);
+            break;
+        }
+
+        case 0x9B: {
+            this->sbc8(this->a, this->e);
+            break;
+        }
+
+        case 0x9C: {
+            this->sbc8(this->a, this->h);
+            break;
+        }
+
+        case 0x9D: {
+            this->sbc8(this->a, this->l);
+            break;
+        }
+
+        case 0x9E: {
+            uint8_t hlValue = this->mmu->read(this->getHL());
+            this->sbc8(this->a, hlValue);
+            break;
+        }
+
+        case 0x9F: {
+            this->sbc8(this->a, this->a);
+            break;
+        }
+
+        case 0xA0: {
+            this->and8(this->a, this->b);
+            break;
+        }
+
+        case 0xA1: {
+            this->and8(this->a, this->c);
+            break;
+        }
+
+        case 0xA2: {
+            this->and8(this->a, this->d);
+            break;
+        }
+
+        case 0xA3: {
+            this->and8(this->a, this->e);
+            break;
+        }
+
+        case 0xA4: {
+            this->and8(this->a, this->h);
+            break;
+        }
+
+        case 0xA5: {
+            this->and8(this->a, this->l);
+            break;
+        }
+
+        case 0xA6: {
+            this->and8(this->a, this->mmu->read(this->getHL()));
+            break;
+        }
+
+        case 0xA7: {
+            this->and8(this->a, this->a);
+            break;
+        }
+
+        case 0xA8: {
+            this->xor8(this->a, this->b);
+            break;
+        }
+
+        case 0xA9: {
+            this->xor8(this->a, this->c);
+            break;
+        }
+
+        case 0xAA: {
+            this->xor8(this->a, this->d);
+            break;
+        }
+
+        case 0xAB: {
+            this->xor8(this->a, this->e);
+            break;
+        }
+
+        case 0xAC: {
+            this->xor8(this->a, this->h);
+            break;
+        }
+
+        case 0xAD: {
+            this->xor8(this->a, this->l);
+            break;
+        }
+
+        case 0xAE: {
+            this->xor8(this->a, this->mmu->read(this->getHL()));
+            break;
+        }
+
         case 0xAF: {
-            this->a = this->a ^ this-> a;
-            setZeroFlag(true);
-            setSubtractFlag(false);
-            setHalfCarryFlag(false);
-            setCarryFlag(false);
+            this->xor8(this->a,this->a);
+            break;
+        }
+
+        case 0xB0: {
+            this->or8(this->a, this->b);
+            break;
+        }
+
+        case 0xB1: {
+            this->or8(this->a, this->c);
+            break;
+        }
+
+        case 0xB2: {
+            this->or8(this->a, this->d);
+            break;
+        }
+
+        case 0xB3: {
+            this->or8(this->a, this->e);
+            break;
+        }
+
+        case 0xB4: {
+            this->or8(this->a, this->h);
+            break;
+        }
+
+        case 0xB5: {
+            this->or8(this->a, this->l);
+            break;
+        }
+
+        case 0xB6: {
+            this->or8(this->a, this->mmu->read(this->getHL()));
+            break;
+        }
+
+        case 0xB7: {
+            this->or8(this->a, this->a);
+            break;
+        }
+
+        case 0xB8: {
+            this->cp8(this->a, this->b);
+            break;
+        }
+
+        case 0xB9: {
+            this->cp8(this->a, this->c);
+            break;
+        }
+
+        case 0xBA: {
+            this->cp8(this->a, this->d);
+            break;
+        }
+
+        case 0xBB: {
+            this->cp8(this->a, this->e);
+            break;
+        }
+
+        case 0xBC: {
+            this->cp8(this->a, this->h);
+            break;
+        }
+
+        case 0xBD: {
+            this->cp8(this->a, this->l);
+            break;
+        }
+
+        case 0xBE: {
+            this->cp8(this->a, this->mmu->read(this->getHL()));
+            break;
+        }
+
+        case 0xBF: {
+            this->cp8(this->a, this->a);
+            break;
+        }
+
+        case 0xC0: {
+            if(!this->getZeroFlag()){
+                this->pc = this->pop();
+            }
+
+            break;
+        }
+
+        case 0xC1: {
+            this->setBC(this->pop());
+            break;
+        }
+
+        case 0xC2: {
+            uint16_t offset = this->getNextd16();
+
+            if(!this->getZeroFlag()){
+                this->pc = offset;
+            }
+
             break;
         }
 
@@ -1070,10 +1493,579 @@ void CPU::decode(uint8_t opCode){
             break;
         }
 
+        case 0xC4: {
+            uint16_t destination = this->getNextd16();
+
+            if(!this->getZeroFlag()){
+                this->push(this->pc);
+                this->pc = destination;
+            }
+
+            break;
+        }
+
+        case 0xC5: {
+            this->push(this->getBC());
+            break;
+        }
+
+        case 0xC6: {
+            this->add8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xC7: {
+            this->rst(0x0000);
+            break;
+        }
+
+        case 0xC8: {
+            if(this->getZeroFlag()){
+                this->pc = this->pop();
+            }
+
+            break;
+        }
+
+        case 0xC9: {
+            this->pc = this->pop();
+            break;
+        }
+
+        case 0xCA: {
+            uint16_t offset = this->getNextd16();
+
+            if(this->getZeroFlag()){
+                this->pc = offset;
+            }
+
+            break;
+        }
+
+        case 0xCB: {
+            uint8_t cbOpcode = this->getNextByte();
+
+            this->decodePrefix(cbOpcode);
+
+            break;
+        }
+
+        case 0xCC: {
+            uint16_t destination = this->getNextd16();
+
+            if(this->getZeroFlag()){
+                this->push(this->pc);
+                this->pc = destination;
+            }
+
+            break;
+        }
+
+        case 0xCD: {
+            uint16_t destination = this->getNextd16();
+            this->push(this->pc);
+            this->pc = destination;
+
+            break;
+        }
+
+        case 0xCE: {
+            this->adc8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xCF: {
+            this->rst(0x0008);
+            break;
+        }
+
+        case 0xD0: {
+            if(!this->getCarryFlag()){
+                this->pc = this->pop();
+            }
+
+            break;
+        }
+
+        case 0xD1: {
+            this->setDE(this->pop());
+            break;
+        }
+
+        case 0xD2: {
+            uint16_t offset = this->getNextd16();
+
+            if(!this->getCarryFlag()){
+                this->pc = offset;
+            }
+
+            break;
+        }
+
+        case 0xD3: {
+            break;
+        }
+
+        case 0xD4: {
+            uint16_t destination = this->getNextd16();
+
+            if(!this->getCarryFlag()){
+                this->push(this->pc);
+                this->pc = destination;
+            }
+
+            break;
+        }
+
+        case 0xD5: {
+            this->push(this->getDE());
+            break;
+        }
+
+        case 0xD6: {
+            this->sub8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xD7: {
+            this->rst(0x0010);
+            break;
+        }
+
+        case 0xD8: {
+            if(this->getCarryFlag()){
+                this->pc = this->pop();
+            }
+
+            break;
+        }
+
+        case 0xD9: {
+            this->pc = this->pop();
+
+            this->ime = true;
+
+            break;
+        }
+
+        case 0xDA: {
+            uint16_t offset = this->getNextd16();
+
+            if(this->getCarryFlag()){
+                this->pc = offset;
+            }
+
+            break;
+        }
+
+        case 0xDB: {break;}
+
+        case 0xDC: {
+            uint16_t destination = this->getNextd16();
+
+            if(this->getCarryFlag()){
+                this->push(this->pc);
+                this->pc = destination;
+            }
+
+            break;
+        }
+
+        case 0xDD: {break;}
+
+        case 0xDE: {
+            this->sbc8(this->a, getNextByte());
+            break;
+        }
+
+        case 0xDF: {
+            this->rst(0x0018);
+            break;
+        }
+
+        case 0xE0: {
+            uint8_t offset = this->getNextByte();
+
+            uint16_t address = 0xFF00 + offset;
+
+            this->mmu->write(address, this->a);
+            break;
+        }
+
+        case 0xE1: {
+            this->setHL(this->pop());
+            break;
+        }
+
+        case 0xE2: {
+            uint8_t offset = this->c;
+
+            uint16_t address = 0xFF00 + offset;
+
+            this->mmu->write(address, this->a);
+            break;
+        }
+
+        case 0xE3: {break;}
+        case 0xE4: {break;}
+
+        case 0xE5: {
+            this->push(this->getHL());
+            break;
+        }
+
+        case 0xE6: {
+            this->and8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xE7: {
+            this->rst(0x0020);
+            break;
+        }
+
+        case 0xE8: {
+            int8_t offset = (int8_t)this->getNextByte();
+            uint8_t unsignedOffset = (uint8_t)offset;
+
+            uint16_t oldSP = this->sp;
+
+            this->setHalfCarryFlag(((oldSP & 0x0F) + (unsignedOffset & 0x0F)) > 0x0F);
+            this->setCarryFlag(((oldSP & 0xFF) + unsignedOffset) > 0xFF);
+            this->setZeroFlag(false);
+            this->setSubtractFlag(false);
+
+            this->sp = this->sp + offset;
+            break;
+        }
+
+        case 0xE9: {
+            this->pc = this->getHL();
+            break;
+        }
+
+        case 0xEA: {
+            uint16_t address = this->getNextd16();
+            this->mmu->write(address, this->a);
+            break;
+        }
+
+        case 0xEB: {break;}
+        case 0xEC: {break;}
+        case 0xED: {break;}
+
+        case 0xEE:{
+            this->xor8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xEF: {
+            this->rst(0x0028);
+            break;
+        }
+
+        case 0xF0:{
+            uint8_t offset = this->getNextByte();
+
+            uint16_t address = 0xFF00 + offset;
+
+            this->a = this->mmu->read(address);
+            break;
+        }
+
+        case 0xF1: {
+            this->setAF(this->pop());
+            break;
+        }
+
+        case 0xF2: {
+            uint8_t offset = this->c;
+
+            uint16_t address = 0xFF00 + offset;
+
+            this->a = this->mmu->read(address);
+            break;
+        }
+
+        case 0xF3: {
+            this->ime = false;
+            break;
+        }
+
+        case 0xF4: {break;}
+
+        case 0xF5: {
+            this->push(this->getAF());
+            break;
+        }
+
+        case 0xF6: {
+            this->or8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xF7: {
+            this->rst(0x0030);
+            break;
+        }
+
+        case 0xF8: {
+            int8_t offset = (int8_t)this->getNextByte();
+            uint16_t oldSP = this->sp;
+
+            uint8_t unsignedOffset = (uint8_t)offset;
+
+            this->setHalfCarryFlag(((oldSP & 0x0F) + (unsignedOffset & 0x0F)) > 0x0F);
+            this->setCarryFlag(((oldSP & 0xFF) + unsignedOffset) > 0xFF);
+
+            this->setZeroFlag(false);
+            this->setSubtractFlag(false);
+
+            this->setHL(oldSP + offset);
+
+            break;
+        }
+
+        case 0xF9: {
+            this->sp = this->getHL();
+            break;
+        }
+
+        case 0xFA: {
+            uint16_t address = this->getNextd16();
+            this->a = this->mmu->read(address);
+            break;
+        }
+
+        case 0xFB: {
+            this->ime = true;
+            break;
+        }
+
+        case 0xFC: {break;}
+        case 0xFD: {break;}
+
+        case 0xFE: {
+            this->cp8(this->a, this->getNextByte());
+            break;
+        }
+
+        case 0xFF: {
+            this->rst(0x0038);
+            break;
+        }
+
         default:
             std::cout << "Unrecognized Opcode: 0x"
             << std::hex << std::setfill('0') << std::setw(2)
             << static_cast<int>(opCode) << std::endl;
+            exit(1);
+    }
+}
+
+void CPU::decodePrefix(uint8_t cbOpcode){
+    switch (cbOpcode) {
+        case 0x00: { this->rlc(this->b); break; }
+        case 0x01: {this->rlc(this->c); break; }
+        case 0x02: {this->rlc(this->d); break; }
+        case 0x03: {this->rlc(this->e); break; }
+        case 0x04: {this->rlc(this->h); break; }
+        case 0x05: {this->rlc(this->l); break; }
+        case 0x06: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->rlc(value);
+            this->mmu->write(this->getHL(), value);
+            break;
+        }
+        case 0x07: { this->rlc(this->a); break; }
+
+        case 0x08: { this->rrc(this->b); break; }
+        case 0x09: { this->rrc(this->c); break; }
+        case 0x0A: { this->rrc(this->d); break; }
+        case 0x0B: { this->rrc(this->e); break; }
+        case 0x0C: { this->rrc(this->h); break; }
+        case 0x0D: { this->rrc(this->l); break; }
+        case 0x0E:{
+            uint8_t value = this->mmu->read(this->getHL());
+            this->rrc(value);
+            this->mmu->write(this->getHL(), value);
+            break;
+        }
+        case 0x0F: { this->rrc(this->a); break; }
+
+        case 0x10: { this->rl(this->b); break; }
+        case 0x11: { this->rl(this->c); break; }
+        case 0x12: { this->rl(this->d); break; }
+        case 0x13: { this->rl(this->e); break; }
+        case 0x14: { this->rl(this->h); break; }
+        case 0x15: { this->rl(this->l); break; }
+        case 0x16: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->rl(value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x17: { this->rl(this->a); break; }
+
+        case 0x18: { this->rr(this->b); break; }
+        case 0x19: { this->rr(this->c); break; }
+        case 0x1A: { this->rr(this->d); break; }
+        case 0x1B: { this->rr(this->e); break; }
+        case 0x1C: { this->rr(this->h); break; }
+        case 0x1D: { this->rr(this->l); break; }
+        case 0x1E:{
+            uint8_t value = this->mmu->read(this->getHL());
+            this->rr(value);
+            this->mmu->write(this->getHL(), value);
+            break;
+        }
+        case 0x1F: { this->rr(this->a); break; }
+
+        case 0x20: { this->sla(this->b); break; }
+        case 0x21: { this->sla(this->c); break; }
+        case 0x22: { this->sla(this->d); break; }
+        case 0x23: { this->sla(this->e); break; }
+        case 0x24: { this->sla(this->h); break; }
+        case 0x25: { this->sla(this->l); break; }
+        case 0x26: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->sla(value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x27: { this->sla(this->a); break; }
+
+        case 0x28: { this->sra(this->b); break; }
+        case 0x29: { this->sra(this->c); break; }
+        case 0x2A: { this->sra(this->d); break; }
+        case 0x2B: { this->sra(this->e); break; }
+        case 0x2C: { this->sra(this->h); break; }
+        case 0x2D: { this->sra(this->l); break; }
+        case 0x2E:{
+            uint8_t value = this->mmu->read(this->getHL());
+            this->sra(value);
+            this->mmu->write(this->getHL(), value);
+            break;
+        }
+        case 0x2F: { this->sra(this->a); break; }
+
+        case 0x30: { this->swap(this->b); break; }
+        case 0x31: { this->swap(this->c); break; }
+        case 0x32: { this->swap(this->d); break; }
+        case 0x33: { this->swap(this->e); break; }
+        case 0x34: { this->swap(this->h); break; }
+        case 0x35: { this->swap(this->l); break; }
+        case 0x36: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->swap(value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x37: { this->swap(this->a); break; }
+
+        case 0x38: { this->srl(this->b); break; }
+        case 0x39: { this->srl(this->c); break; }
+        case 0x3A: { this->srl(this->d); break; }
+        case 0x3B: { this->srl(this->e); break; }
+        case 0x3C: { this->srl(this->h); break; }
+        case 0x3D: { this->srl(this->l); break; }
+        case 0x3E:{
+            uint8_t value = this->mmu->read(this->getHL());
+            this->srl(value);
+            this->mmu->write(this->getHL(), value);
+            break;
+        }
+        case 0x3F: { this->srl(this->a); break; }
+
+        case 0x40: { this->bit(0, this->b); break; }
+        case 0x41: { this->bit(0, this->c); break; }
+        case 0x42: { this->bit(0, this->d); break; }
+        case 0x43: { this->bit(0, this->e); break; }
+        case 0x44: { this->bit(0, this->h); break; }
+        case 0x45: { this->bit(0, this->l); break; }
+        case 0x46: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(0, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x47: { this->bit(1, this->a); break; }
+
+        case 0x48: { this->bit(1, this->b); break; }
+        case 0x49: { this->bit(1, this->c); break; }
+        case 0x4A: { this->bit(1, this->d); break; }
+        case 0x4B: { this->bit(1, this->e); break; }
+        case 0x4C: { this->bit(1, this->h); break; }
+        case 0x4D: { this->bit(1, this->l); break; }
+        case 0x4E: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(1, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x4F: { this->bit(1, this->a); break; }
+
+        case 0x50: { this->bit(2, this->b); break; }
+        case 0x51: { this->bit(2, this->c); break; }
+        case 0x52: { this->bit(2, this->d); break; }
+        case 0x53: { this->bit(2, this->e); break; }
+        case 0x54: { this->bit(2, this->h); break; }
+        case 0x55: { this->bit(2, this->l); break; }
+        case 0x56: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(2, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x57: { this->bit(2, this->a); break; }
+
+        case 0x58: { this->bit(3, this->b); break; }
+        case 0x59: { this->bit(3, this->c); break; }
+        case 0x5A: { this->bit(3, this->d); break; }
+        case 0x5B: { this->bit(3, this->e); break; }
+        case 0x5C: { this->bit(3, this->h); break; }
+        case 0x5D: { this->bit(3, this->l); break; }
+        case 0x5E: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(3, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x5F: { this->bit(3, this->a); break; }
+
+        case 0x60: { this->bit(4, this->b); break; }
+        case 0x61: { this->bit(4, this->c); break; }
+        case 0x62: { this->bit(4, this->d); break; }
+        case 0x63: { this->bit(4, this->e); break; }
+        case 0x64: { this->bit(4, this->h); break; }
+        case 0x65: { this->bit(4, this->l); break; }
+        case 0x66: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(4, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x67: { this->bit(4, this->a); break; }
+
+        case 0x68: { this->bit(5, this->b); break; }
+        case 0x69: { this->bit(5, this->c); break; }
+        case 0x6A: { this->bit(5, this->d); break; }
+        case 0x6B: { this->bit(5, this->e); break; }
+        case 0x6C: { this->bit(5, this->h); break; }
+        case 0x6D: { this->bit(5, this->l); break; }
+        case 0x6E: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(5, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x6F: { this->bit(5, this->a); break; }
+
+
+        default:
+            std::cout << "Unrecognized Opcode: CB 0x"
+            << std::hex << std::setfill('0') << std::setw(2)
+            << static_cast<int>(cbOpcode) << std::endl;
             exit(1);
     }
 }
