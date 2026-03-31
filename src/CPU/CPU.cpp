@@ -370,6 +370,14 @@ void CPU::bit(uint8_t bitPosition, uint8_t reg){
     this->setHalfCarryFlag(true);
 }
 
+void CPU::res(uint8_t bitPosition, uint8_t& reg){
+    reg = reg & ~(1 << bitPosition);
+}
+
+void CPU::set(uint8_t bitPosition, uint8_t& reg){
+    reg = reg | (1 << bitPosition);
+}
+
 void CPU::decode(uint8_t opCode){
     switch (opCode) {
         case 0x00:
@@ -1989,7 +1997,7 @@ void CPU::decodePrefix(uint8_t cbOpcode){
             this->mmu->write(this->getHL(),value);
             break;
         }
-        case 0x47: { this->bit(1, this->a); break; }
+        case 0x47: { this->bit(0, this->a); break; }
 
         case 0x48: { this->bit(1, this->b); break; }
         case 0x49: { this->bit(1, this->c); break; }
@@ -2061,10 +2069,262 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         }
         case 0x6F: { this->bit(5, this->a); break; }
 
+        case 0x70: { this->bit(6, this->b); break; }
+        case 0x71: { this->bit(6, this->c); break; }
+        case 0x72: { this->bit(6, this->d); break; }
+        case 0x73: { this->bit(6, this->e); break; }
+        case 0x74: { this->bit(6, this->h); break; }
+        case 0x75: { this->bit(6, this->l); break; }
+        case 0x76: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(6, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x77: { this->bit(6, this->a); break; }
+
+        case 0x78: { this->bit(7, this->b); break; }
+        case 0x79: { this->bit(7, this->c); break; }
+        case 0x7A: { this->bit(7, this->d); break; }
+        case 0x7B: { this->bit(7, this->e); break; }
+        case 0x7C: { this->bit(7, this->h); break; }
+        case 0x7D: { this->bit(7, this->l); break; }
+        case 0x7E: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->bit(7, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x7F: { this->bit(7, this->a); break; }
+
+        case 0x80: { this->res(0, this->b); break; }
+        case 0x81: { this->res(0, this->c); break; }
+        case 0x82: { this->res(0, this->d); break; }
+        case 0x83: { this->res(0, this->e); break; }
+        case 0x84: { this->res(0, this->h); break; }
+        case 0x85: { this->res(0, this->l); break; }
+        case 0x86: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(0, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x87: { this->res(0, this->a); break; }
+
+        case 0x88: { this->res(1, this->b); break; }
+        case 0x89: { this->res(1, this->c); break; }
+        case 0x8A: { this->res(1, this->d); break; }
+        case 0x8B: { this->res(1, this->e); break; }
+        case 0x8C: { this->res(1, this->h); break; }
+        case 0x8D: { this->res(1, this->l); break; }
+        case 0x8E: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(1, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x8F: { this->res(1, this->a); break; }
+
+        case 0x90: { this->res(2, this->b); break; }
+        case 0x91: { this->res(2, this->c); break; }
+        case 0x92: { this->res(2, this->d); break; }
+        case 0x93: { this->res(2, this->e); break; }
+        case 0x94: { this->res(2, this->h); break; }
+        case 0x95: { this->res(2, this->l); break; }
+        case 0x96: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(2, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x97: { this->res(2, this->a); break; }
+
+        case 0x98: { this->res(3, this->b); break; }
+        case 0x99: { this->res(3, this->c); break; }
+        case 0x9A: { this->res(3, this->d); break; }
+        case 0x9B: { this->res(3, this->e); break; }
+        case 0x9C: { this->res(3, this->h); break; }
+        case 0x9D: { this->res(3, this->l); break; }
+        case 0x9E: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(3, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0x9F: { this->res(3, this->a); break; }
+
+        case 0xA0: { this->res(4, this->b); break; }
+        case 0xA1: { this->res(4, this->c); break; }
+        case 0xA2: { this->res(4, this->d); break; }
+        case 0xA3: { this->res(4, this->e); break; }
+        case 0xA4: { this->res(4, this->h); break; }
+        case 0xA5: { this->res(4, this->l); break; }
+        case 0xA6: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(4, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xA7: { this->res(4, this->a); break; }
+
+        case 0xA8: { this->res(5, this->b); break; }
+        case 0xA9: { this->res(5, this->c); break; }
+        case 0xAA: { this->res(5, this->d); break; }
+        case 0xAB: { this->res(5, this->e); break; }
+        case 0xAC: { this->res(5, this->h); break; }
+        case 0xAD: { this->res(5, this->l); break; }
+        case 0xAE: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(5, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xAF: { this->res(5, this->a); break; }
+
+        case 0xB0: { this->res(6, this->b); break; }
+        case 0xB1: { this->res(6, this->c); break; }
+        case 0xB2: { this->res(6, this->d); break; }
+        case 0xB3: { this->res(6, this->e); break; }
+        case 0xB4: { this->res(6, this->h); break; }
+        case 0xB5: { this->res(6, this->l); break; }
+        case 0xB6: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(6, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xB7: { this->res(6, this->a); break; }
+
+        case 0xB8: { this->res(7, this->b); break; }
+        case 0xB9: { this->res(7, this->c); break; }
+        case 0xBA: { this->res(7, this->d); break; }
+        case 0xBB: { this->res(7, this->e); break; }
+        case 0xBC: { this->res(7, this->h); break; }
+        case 0xBD: { this->res(7, this->l); break; }
+        case 0xBE: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->res(7, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xBF: { this->res(7, this->a); break; }
+
+        case 0xC0: { this->set(0, this->b); break; }
+        case 0xC1: { this->set(0, this->c); break; }
+        case 0xC2: { this->set(0, this->d); break; }
+        case 0xC3: { this->set(0, this->e); break; }
+        case 0xC4: { this->set(0, this->h); break; }
+        case 0xC5: { this->set(0, this->l); break; }
+        case 0xC6: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(0, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xC7: { this->set(0, this->a); break; }
+
+        case 0xC8: { this->set(1, this->b); break; }
+        case 0xC9: { this->set(1, this->c); break; }
+        case 0xCA: { this->set(1, this->d); break; }
+        case 0xCB: { this->set(1, this->e); break; }
+        case 0xCC: { this->set(1, this->h); break; }
+        case 0xCD: { this->set(1, this->l); break; }
+        case 0xCE: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(1, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xCF: { this->set(1, this->a); break; }
+
+        case 0xD0: { this->set(2, this->b); break; }
+        case 0xD1: { this->set(2, this->c); break; }
+        case 0xD2: { this->set(2, this->d); break; }
+        case 0xD3: { this->set(2, this->e); break; }
+        case 0xD4: { this->set(2, this->h); break; }
+        case 0xD5: { this->set(2, this->l); break; }
+        case 0xD6: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(2, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xD7: { this->set(2, this->a); break; }
+
+        case 0xD8: { this->set(3, this->b); break; }
+        case 0xD9: { this->set(3, this->c); break; }
+        case 0xDA: { this->set(3, this->d); break; }
+        case 0xDB: { this->set(3, this->e); break; }
+        case 0xDC: { this->set(3, this->h); break; }
+        case 0xDD: { this->set(3, this->l); break; }
+        case 0xDE: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(3, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xDF: { this->set(3, this->a); break; }
+
+        case 0xE0: { this->set(4, this->b); break; }
+        case 0xE1: { this->set(4, this->c); break; }
+        case 0xE2: { this->set(4, this->d); break; }
+        case 0xE3: { this->set(4, this->e); break; }
+        case 0xE4: { this->set(4, this->h); break; }
+        case 0xE5: { this->set(4, this->l); break; }
+        case 0xE6: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(4, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xE7: { this->set(4, this->a); break; }
+
+        case 0xE8: { this->set(5, this->b); break; }
+        case 0xE9: { this->set(5, this->c); break; }
+        case 0xEA: { this->set(5, this->d); break; }
+        case 0xEB: { this->set(5, this->e); break; }
+        case 0xEC: { this->set(5, this->h); break; }
+        case 0xED: { this->set(5, this->l); break; }
+        case 0xEE: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(5, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xEF: { this->set(5, this->a); break; }
+
+        case 0xF0: { this->set(6, this->b); break; }
+        case 0xF1: { this->set(6, this->c); break; }
+        case 0xF2: { this->set(6, this->d); break; }
+        case 0xF3: { this->set(6, this->e); break; }
+        case 0xF4: { this->set(6, this->h); break; }
+        case 0xF5: { this->set(6, this->l); break; }
+        case 0xF6: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(6, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xF7: { this->set(6, this->a); break; }
+
+        case 0xF8: { this->set(7, this->b); break; }
+        case 0xF9: { this->set(7, this->c); break; }
+        case 0xFA: { this->set(7, this->d); break; }
+        case 0xFB: { this->set(7, this->e); break; }
+        case 0xFC: { this->set(7, this->h); break; }
+        case 0xFD: { this->set(7, this->l); break; }
+        case 0xFE: {
+            uint8_t value = this->mmu->read(this->getHL());
+            this->set(7, value);
+            this->mmu->write(this->getHL(),value);
+            break;
+        }
+        case 0xFF: { this->set(7, this->a); break; }
+
 
         default:
             std::cout << "Unrecognized Opcode: CB 0x"
-            << std::hex << std::setfill('0') << std::setw(2)
+            << std::hex << std::setfill('0') << std::setw(4)
             << static_cast<int>(cbOpcode) << std::endl;
             exit(1);
     }

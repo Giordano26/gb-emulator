@@ -73,6 +73,10 @@ private:
 
     void bit(uint8_t bitPosition, uint8_t reg);
 
+    void res(uint8_t bitPosition, uint8_t& reg);
+
+    void set(uint8_t bitPosition, uint8_t& reg);
+
 
 public:
     CPU(MMU* mmuPtr);
