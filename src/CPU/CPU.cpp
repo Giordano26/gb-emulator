@@ -1994,7 +1994,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x46: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(0, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x47: { this->bit(0, this->a); break; }
@@ -2008,7 +2007,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x4E: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(1, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x4F: { this->bit(1, this->a); break; }
@@ -2022,7 +2020,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x56: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(2, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x57: { this->bit(2, this->a); break; }
@@ -2036,7 +2033,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x5E: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(3, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x5F: { this->bit(3, this->a); break; }
@@ -2050,7 +2046,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x66: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(4, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x67: { this->bit(4, this->a); break; }
@@ -2064,7 +2059,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x6E: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(5, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x6F: { this->bit(5, this->a); break; }
@@ -2078,7 +2072,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x76: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(6, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x77: { this->bit(6, this->a); break; }
@@ -2092,7 +2085,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
         case 0x7E: {
             uint8_t value = this->mmu->read(this->getHL());
             this->bit(7, value);
-            this->mmu->write(this->getHL(),value);
             break;
         }
         case 0x7F: { this->bit(7, this->a); break; }
