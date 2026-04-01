@@ -14,6 +14,10 @@ uint8_t MMU::read(uint16_t address){
         return wram[address - 0xC000];
     }
 
+    if (address >= 0xFF04 && address <= 0xFF07) {
+        return this->timer.read(address);
+    }
+
     return 0xFF;
 }
 
@@ -32,4 +36,20 @@ uint16_t MMU::read16(uint16_t address){
 void MMU::write16(uint16_t address, uint16_t value){
     this->write(address, value & 0xFF);
     this->write(address+1, (value >> 8) & 0xFF);
+}
+
+void MMU::tick(uint8_t cycles){
+    bool timerOverflowed = this->timer.update(cycles);
+
+    if (timerOverflowed) {
+        this->requestInterrupt(2);
+    }
+}
+
+void MMU::requestInterrupt(uint8_t interruptBit){
+    uint8_t currentIF = this->read(0xFF0F);
+
+    currentIF = currentIF | (1 << interruptBit);
+
+    this->write(0xFF0F, currentIF);
 }

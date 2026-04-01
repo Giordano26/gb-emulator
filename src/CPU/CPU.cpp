@@ -63,11 +63,60 @@ uint8_t CPU::getNextByte(){
     return nextByte;
 }
 
+void CPU::handleInterrupts(){
+    if (!this->ime) return;
+
+    uint8_t req = this->mmu->read(0xFF0F);
+    uint8_t enabled = this->mmu->read(0xFFFF);
+
+    uint8_t pending = req & enabled & 0x1F;
+
+    if (pending == 0) return;
+
+    for (int i = 0; i <= 4; i++) {
+        if (pending & (1 << i)) {
+
+            this->ime = false;
+
+            req = req & ~(1 << i);
+            this->mmu->write(0xFF0F, req);
+
+            this->push(this->pc);
+
+            switch (i) {
+                case 0: this->pc = 0x0040; break;
+                case 1: this->pc = 0x0048; break;
+                case 2: this->pc = 0x0050; break;
+                case 3: this->pc = 0x0058; break;
+                case 4: this->pc = 0x0060; break;
+            }
+
+            this->mmu->tick(20);
+
+            return;
+        }
+    }
+}
+
 void CPU::runStep(){
-    if(this->isHalted) return;
+    uint8_t ie = this->mmu->read(0xFFFF);
+    uint8_t if_flag = this->mmu->read(0xFF0F);
+
+    if ((ie & if_flag & 0x1F) != 0) {
+        this->isHalted = false;
+    }
+
+    if (this->isHalted) {
+        this->mmu->tick(4);
+        return;
+    }
+
+    this->handleInterrupts();
 
     uint8_t opCode = getNextByte();
-    this->decode(opCode);
+    uint8_t cycles = this->decode(opCode);
+
+    this->mmu->tick(cycles);
 }
 
 void CPU::setZeroFlag(bool state){
@@ -378,7 +427,9 @@ void CPU::set(uint8_t bitPosition, uint8_t& reg){
     reg = reg | (1 << bitPosition);
 }
 
-void CPU::decode(uint8_t opCode){
+uint8_t CPU::decode(uint8_t opCode){
+    uint8_t cycles = this->opCycles[opCode];
+
     switch (opCode) {
         case 0x00:
             break;
@@ -590,6 +641,7 @@ void CPU::decode(uint8_t opCode){
 
             if(!this->getZeroFlag()){
                 this->pc += offset;
+                cycles += 4;
             }
 
             break;
@@ -661,6 +713,7 @@ void CPU::decode(uint8_t opCode){
 
             if(getZeroFlag()){
                 this->pc += offset;
+                cycles += 4;
             }
 
             break;
@@ -713,6 +766,7 @@ void CPU::decode(uint8_t opCode){
 
             if(!this->getCarryFlag()){
                 this->pc += offset;
+                cycles += 4;
             }
 
             break;
@@ -783,6 +837,7 @@ void CPU::decode(uint8_t opCode){
 
             if(this->getCarryFlag()){
                 this->pc += offset;
+                cycles += 4;
             }
 
             break;
@@ -1476,6 +1531,7 @@ void CPU::decode(uint8_t opCode){
         case 0xC0: {
             if(!this->getZeroFlag()){
                 this->pc = this->pop();
+                cycles += 12;
             }
 
             break;
@@ -1491,6 +1547,7 @@ void CPU::decode(uint8_t opCode){
 
             if(!this->getZeroFlag()){
                 this->pc = offset;
+                cycles += 4;
             }
 
             break;
@@ -1507,6 +1564,7 @@ void CPU::decode(uint8_t opCode){
             if(!this->getZeroFlag()){
                 this->push(this->pc);
                 this->pc = destination;
+                cycles += 12;
             }
 
             break;
@@ -1530,6 +1588,8 @@ void CPU::decode(uint8_t opCode){
         case 0xC8: {
             if(this->getZeroFlag()){
                 this->pc = this->pop();
+                cycles += 12;
+
             }
 
             break;
@@ -1545,6 +1605,7 @@ void CPU::decode(uint8_t opCode){
 
             if(this->getZeroFlag()){
                 this->pc = offset;
+                cycles += 4;
             }
 
             break;
@@ -1553,8 +1614,7 @@ void CPU::decode(uint8_t opCode){
         case 0xCB: {
             uint8_t cbOpcode = this->getNextByte();
 
-            this->decodePrefix(cbOpcode);
-
+            cycles = 4 + this->decodePrefix(cbOpcode);
             break;
         }
 
@@ -1564,6 +1624,7 @@ void CPU::decode(uint8_t opCode){
             if(this->getZeroFlag()){
                 this->push(this->pc);
                 this->pc = destination;
+                cycles += 12;
             }
 
             break;
@@ -1590,6 +1651,7 @@ void CPU::decode(uint8_t opCode){
         case 0xD0: {
             if(!this->getCarryFlag()){
                 this->pc = this->pop();
+                cycles += 12;
             }
 
             break;
@@ -1605,6 +1667,7 @@ void CPU::decode(uint8_t opCode){
 
             if(!this->getCarryFlag()){
                 this->pc = offset;
+                cycles += 4;
             }
 
             break;
@@ -1620,6 +1683,7 @@ void CPU::decode(uint8_t opCode){
             if(!this->getCarryFlag()){
                 this->push(this->pc);
                 this->pc = destination;
+                cycles += 12;
             }
 
             break;
@@ -1643,6 +1707,7 @@ void CPU::decode(uint8_t opCode){
         case 0xD8: {
             if(this->getCarryFlag()){
                 this->pc = this->pop();
+                cycles += 12;
             }
 
             break;
@@ -1661,6 +1726,7 @@ void CPU::decode(uint8_t opCode){
 
             if(this->getCarryFlag()){
                 this->pc = offset;
+                cycles += 4;
             }
 
             break;
@@ -1674,6 +1740,7 @@ void CPU::decode(uint8_t opCode){
             if(this->getCarryFlag()){
                 this->push(this->pc);
                 this->pc = destination;
+                cycles += 12;
             }
 
             break;
@@ -1869,9 +1936,13 @@ void CPU::decode(uint8_t opCode){
             << static_cast<int>(opCode) << std::endl;
             exit(1);
     }
+
+    return cycles;
 }
 
-void CPU::decodePrefix(uint8_t cbOpcode){
+uint8_t CPU::decodePrefix(uint8_t cbOpcode){
+    uint8_t cycles = this->cbCycles[cbOpcode];
+
     switch (cbOpcode) {
         case 0x00: { this->rlc(this->b); break; }
         case 0x01: {this->rlc(this->c); break; }
@@ -2320,4 +2391,6 @@ void CPU::decodePrefix(uint8_t cbOpcode){
             << static_cast<int>(cbOpcode) << std::endl;
             exit(1);
     }
+
+    return cycles;
 }

@@ -4,7 +4,7 @@ TARGET = emulador
 
 OBJ_DIR = build
 
-SRCS = src/main.cpp src/ROM/ROM.cpp src/MMU/MMU.cpp src/CPU/CPU.cpp
+SRCS = src/main.cpp src/ROM/ROM.cpp src/MMU/MMU.cpp src/CPU/CPU.cpp src/Timer/Timer.cpp
 
 OBJS = $(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 

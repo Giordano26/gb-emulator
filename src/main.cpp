@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <iostream>
 #include "ROM/ROM.hpp"
 #include "MMU/MMU.hpp"
