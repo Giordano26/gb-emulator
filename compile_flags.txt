@@ -1,3 +1,5 @@
+-xc++
 -std=c++17
 -Isrc
--Wall
+-I/opt/homebrew/include/SDL2
+-I/usr/local/include/SDL2

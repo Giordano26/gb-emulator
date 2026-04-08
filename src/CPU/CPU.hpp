@@ -125,7 +125,7 @@ public:
     CPU(MMU* mmuPtr);
 
     void reset();
-    void runStep();
+    uint8_t runStep();
 
     uint16_t getAF();
     void setAF(uint16_t value);

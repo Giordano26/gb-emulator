@@ -1,4 +1,4 @@
-#include "TIMER/Timer.hpp"
+#include "Timer/Timer.hpp"
 #include <cstdint>
 
 Timer::Timer(){

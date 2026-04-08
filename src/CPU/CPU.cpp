@@ -48,16 +48,29 @@ void CPU::setHL(uint16_t value){
 }
 
 void CPU::reset(){
+    if(this->mmu->hasBootRom()){
+        this->pc = 0x0000;
+        this->sp = 0x0000;
+
+        this->a = 0; this->f = 0;
+        this->b = 0; this->c = 0;
+        this->d = 0; this->e = 0;
+        this->h = 0; this->l = 0;
+
+        return;
+    }
+
     this->pc = 0x0100;
+    this->sp = 0xFFFE;
+
+    this->setAF(0x01B0);
+    this->setBC(0x0013);
+    this->setDE(0x00D8);
+    this->setHL(0x014D);
 }
 
 uint8_t CPU::getNextByte(){
     uint8_t nextByte = this->mmu->read(this->pc);
-
-    std::cout << "0x" <<
-    std::hex << std::setfill('0') << std::setw(2)
-    << static_cast<int>(nextByte) << std::endl;
-
     this->pc++;
 
     return nextByte;
@@ -98,7 +111,7 @@ void CPU::handleInterrupts(){
     }
 }
 
-void CPU::runStep(){
+uint8_t CPU::runStep(){
     uint8_t ie = this->mmu->read(0xFFFF);
     uint8_t if_flag = this->mmu->read(0xFF0F);
 
@@ -108,7 +121,7 @@ void CPU::runStep(){
 
     if (this->isHalted) {
         this->mmu->tick(4);
-        return;
+        return 4;
     }
 
     this->handleInterrupts();
@@ -117,6 +130,7 @@ void CPU::runStep(){
     uint8_t cycles = this->decode(opCode);
 
     this->mmu->tick(cycles);
+    return cycles;
 }
 
 void CPU::setZeroFlag(bool state){

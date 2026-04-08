@@ -6,10 +6,11 @@
 class ROM {
 private:
     std::vector<uint8_t> romData;
+    std::string file;
 
 public:
-    ROM();
+    ROM(std::string filePath);
 
-    bool load(const std::string& filePath);
+    bool load();
     uint8_t read(uint16_t address);
 };

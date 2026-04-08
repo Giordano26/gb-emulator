@@ -3,11 +3,17 @@
 #include <iostream>
 #include <fstream>
 
-ROM::ROM(){}
+ROM::ROM(std::string filePath): file(filePath){
+    if (!this->load()) {
+        std::cerr << "Could not open ROM: " << filePath << std::endl;
+    } else {
+        std::cout << "ROM loaded successfully wit size: " << romData.size() << " bytes." << std::endl;
+    }
+}
 
 
-bool ROM::load(const std::string& filePath){
-    std::ifstream romFile(filePath, std::ios::binary);
+bool ROM::load(){
+    std::ifstream romFile(this->file, std::ios::binary);
 
     if(!romFile.is_open()) return false;
 
@@ -24,5 +30,9 @@ bool ROM::load(const std::string& filePath){
 }
 
 uint8_t ROM::read(uint16_t address) {
-    return romData[address];
+    if (address < this->romData.size()) {
+        return this->romData[address];
+    }
+
+    return 0xFF;
 }
