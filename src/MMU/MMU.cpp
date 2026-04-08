@@ -21,8 +21,13 @@ MMU::MMU(ROM* rom):loadedRom(rom){
 }
 
 uint8_t MMU::read(uint16_t address){
-    //refact a hashmap to each addres for each instruction maybe??
-    if(address < 0x8000){ return this->loadedRom->read(address); }
+    if(address < 0x8000){
+        if(this->bootromEnabled && address < 0x0100){
+            return this->bootRom[address];
+        }
+
+        return this->loadedRom->read(address);
+    }
 
     if(address >= 0xC000 && address <= 0xDFFF){ return this->wram[address - 0xC000]; }
 
@@ -120,6 +125,11 @@ void MMU::write(uint16_t address, uint8_t value){
 
     if (address >= 0xFF04 && address <= 0xFF07) {
         this->timer.write(address, value);
+        return;
+    }
+
+    if (address == 0xFF50 && value != 0) {
+        this->bootromEnabled = false;
         return;
     }
 
