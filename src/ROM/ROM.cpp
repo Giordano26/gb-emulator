@@ -36,3 +36,8 @@ uint8_t ROM::read(uint16_t address) {
 
     return 0xFF;
 }
+
+void ROM::write(uint16_t address, uint8_t value) {
+    //Future MBC/RAM impl
+    return;
+}

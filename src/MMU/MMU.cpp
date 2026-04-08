@@ -21,6 +21,7 @@ MMU::MMU(ROM* rom):loadedRom(rom){
 }
 
 uint8_t MMU::read(uint16_t address){
+    //ROM AND BOOT ROM
     if(address < 0x8000){
         if(this->bootromEnabled && address < 0x0100){
             return this->bootRom[address];
@@ -29,115 +30,139 @@ uint8_t MMU::read(uint16_t address){
         return this->loadedRom->read(address);
     }
 
-    if(address >= 0xC000 && address <= 0xDFFF){ return this->wram[address - 0xC000]; }
+    //VRAM AREA
+    if (address >= 0x8000 && address <= 0x9FFF) {
+        return this->ppu.read(address);
+    }
 
+    //CARTRIDGE RAM AREA
+    if (address >= 0xA000 && address <= 0xBFFF) {
+        return this->loadedRom->read(address);
+    }
 
-    if(address >= 0xFF04 && address <= 0xFF07) { return this->timer.read(address); }
+    //WORKING RAM AREA
+    if (address >= 0xC000 && address <= 0xDFFF) {
+        return this->wram[address - 0xC000];
+    }
 
-    if(address >= 0x8000 && address <= 0x9FFF){ return this->ppu.read(address); }
-    if(address >= 0xFE00 && address <= 0xFE9F){ return this->ppu.read(address); }
-    if(address == 0xFF40){ return this->ppu.read(address); }
-    if(address == 0xFF41){ return this->ppu.read(address); }
-    if(address == 0xFF42){ return this->ppu.read(address); }
-    if(address == 0xFF43){ return this->ppu.read(address); }
-    if(address == 0xFF44){ return this->ppu.read(address); }
-    if(address == 0xFF45){ return this->ppu.read(address); }
-    if(address == 0xFF47){ return this->ppu.read(address); }
-    if(address == 0xFF48){ return this->ppu.read(address); }
-    if(address == 0xFF49){ return this->ppu.read(address); }
+    //ECHO RAM AREA
+    if (address >= 0xE000 && address <= 0xFDFF) {
+        return this->wram[address - 0xE000];
+    }
 
+    //OAM AREA
+    if (address >= 0xFE00 && address <= 0xFE9F) {
+        return this->ppu.read(address);
+    }
 
+    //I/O AREA
+    if (address >= 0xFF00 && address <= 0xFF7F) {
+        //Timer
+        if (address >= 0xFF04 && address <= 0xFF07) return this->timer.read(address);
 
-    if(address >= 0xFF80 && address <= 0xFFFE){return this->hram[address - 0xFF80];}
+        //Interrupt Flag
+        if (address == 0xFF0F) return this->interruptFlag;
 
-    if(address == 0xFF0F){ return this->interruptFlag; }
+        //PPU Output
+        if (address >= 0xFF40 && address <= 0xFF4B) return this->ppu.read(address);
 
-    if(address == 0xFFFF){ return this->interruptEnable; }
+        return 0xFF;
+    }
 
+    //HIGH RAM AREA
+    if (address >= 0xFF80 && address <= 0xFFFE) {
+        return this->hram[address - 0xFF80];
+    }
+
+    if (address == 0xFFFF) {
+        return this->interruptEnable;
+    }
 
     return 0xFF;
 }
 
 void MMU::write(uint16_t address, uint8_t value){
+    //MBC area
+    if (address < 0x8000) {
+        this->loadedRom->write(address, value);
+        return;
+    }
+
+    //VRAM area
+    if (address >= 0x8000 && address <= 0x9FFF) {
+        this->ppu.write(address, value);
+        return;
+    }
+
+    //CARTDRIGE RAM AREA
+    if (address >= 0xA000 && address <= 0xBFFF) {
+        this->loadedRom->write(address, value);
+        return;
+    }
+
+    //WORKING RAM AREA
     if (address >= 0xC000 && address <= 0xDFFF) {
         this->wram[address - 0xC000] = value;
         return;
     }
 
-    if(address >= 0x8000 && address <= 0x9FFF){
-        this->ppu.write(address, value);
+    //Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF) {
+        this->wram[address - 0xE000] = value;
         return;
     }
-    if(address >= 0xFE00 && address <= 0xFE9F){
-        this->ppu.write(address, value);
-        return;
-    }
-    if (address == 0xFF40){
-        this->ppu.write(address, value);
-        return;
-    }
-    if (address == 0xFF41){
-        this->ppu.write(address, value);
-        return;
-    }
-    if (address == 0xFF42){
-        this->ppu.write(address, value);
-        return;
-    }
-    if (address == 0xFF43){
-        this->ppu.write(address, value);
-        return;
-    }
-    if (address == 0xFF44) {
-        this->ppu.write(address, value);
-        return;
-    }
-    if (address == 0xFF45){
-        this->ppu.write(address, value);
-        return;
-    }
-    if(address == 0xFF47){
-        this->ppu.write(address, value);
-        return;
-    }
-    if(address == 0xFF48){
-        this->ppu.write(address, value);
-        return;
-    }
-    if(address == 0xFF49){
+
+    //OAM AREA
+    if (address >= 0xFE00 && address <= 0xFE9F) {
         this->ppu.write(address, value);
         return;
     }
 
-    if(address >= 0xFF80 && address <= 0xFFFE){
+    //I/O AREA
+    if (address >= 0xFF00 && address <= 0xFF7F) {
+        // Timer
+        if (address >= 0xFF04 && address <= 0xFF07) {
+            this->timer.write(address, value);
+            return;
+        }
+
+        // Interrupt Flag
+        if (address == 0xFF0F) {
+            this->interruptFlag = value;
+            return;
+        }
+
+        // DMA Transfer
+        if (address == 0xFF46) {
+            uint16_t source = value << 8;
+            for (int i = 0; i < 160; i++) {
+                this->write(0xFE00 + i, this->read(source + i));
+            }
+            return;
+        }
+
+        // BOOT ROM OFF
+        if (address == 0xFF50 && value != 0) {
+            this->bootromEnabled = false;
+            return;
+        }
+
+        //PPU OUTPUT
+        if (address >= 0xFF40 && address <= 0xFF4B) {
+            this->ppu.write(address, value);
+            return;
+        }
+
+        return;
+    }
+
+    //HIGH RAM
+    if (address >= 0xFF80 && address <= 0xFFFE) {
         this->hram[address - 0xFF80] = value;
         return;
     }
 
-    if (address == 0xFF46) {
-        uint16_t source = value << 8;
-        for (int i = 0; i < 160; i++) {
-            uint8_t byteToCopy = this->read(source + i);
-            this->write(0xFE00 + i, byteToCopy);
-        }
-        return;
-    }
-
-    if (address >= 0xFF04 && address <= 0xFF07) {
-        this->timer.write(address, value);
-        return;
-    }
-
-    if (address == 0xFF50 && value != 0) {
-        this->bootromEnabled = false;
-        return;
-    }
-
-    if (address == 0xFF0F) {
-        this->interruptFlag = value;
-        return;
-    }
-
+    //IE
     if (address == 0xFFFF) {
         this->interruptEnable = value;
         return;
