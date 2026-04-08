@@ -1,5 +1,0 @@
--xc++
--std=c++17
--Isrc
--I/opt/homebrew/include/SDL2
--I/usr/local/include/SDL2

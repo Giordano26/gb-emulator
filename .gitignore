@@ -8,3 +8,5 @@ Thumbs.db
 *.gb
 *.bin
 gabs
+compile_commands.json
+.cache
