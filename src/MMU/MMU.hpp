@@ -1,4 +1,5 @@
 #pragma once
+#include "Joypad/Joypad.hpp"
 #include "ROM/ROM.hpp"
 #include "PPU/PPU.hpp"
 #include "Timer/Timer.hpp"
@@ -26,8 +27,9 @@ public:
     MMU(ROM* rom);
 
     PPU ppu;
+    Joypad joypad;
 
-    bool hasBootRom() const {return bootromEnabled; }
+    bool hasBootRom() const { return bootromEnabled; }
 
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);

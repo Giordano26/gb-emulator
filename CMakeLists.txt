@@ -18,6 +18,7 @@ set(SOURCES
     src/CPU/CPU.cpp
     src/Timer/Timer.cpp
     src/PPU/PPU.cpp
+    src/Joypad/Joypad.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

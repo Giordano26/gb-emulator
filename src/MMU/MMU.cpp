@@ -57,6 +57,8 @@ uint8_t MMU::read(uint16_t address){
 
     //I/O AREA
     if (address >= 0xFF00 && address <= 0xFF7F) {
+        //Joypad
+        if (address == 0xFF00) return this->joypad.read();
         //Timer
         if (address >= 0xFF04 && address <= 0xFF07) return this->timer.read(address);
 
@@ -120,6 +122,12 @@ void MMU::write(uint16_t address, uint8_t value){
 
     //I/O AREA
     if (address >= 0xFF00 && address <= 0xFF7F) {
+        //Joypad
+        if (address == 0xFF00) {
+            this->joypad.write(value);
+            return;
+        }
+
         // Timer
         if (address >= 0xFF04 && address <= 0xFF07) {
             this->timer.write(address, value);

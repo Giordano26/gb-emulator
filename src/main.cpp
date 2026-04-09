@@ -8,6 +8,39 @@ const int GB_WIDTH = 160;
 const int GB_HEIGHT = 144;
 const int SCALE = 4;
 
+void handleKeyboard(SDL_Event& event, MMU& motherboard) {
+    bool isDown = (event.type == SDL_KEYDOWN);
+    uint8_t bit = 255;
+    bool isDir = false;
+
+    switch (event.key.keysym.sym) {
+        case SDLK_z:     bit = 0; isDir = false; break; // A
+        case SDLK_x:     bit = 1; isDir = false; break; // B
+        case SDLK_c:     bit = 2; isDir = false; break; // Select
+        case SDLK_v:     bit = 3; isDir = false; break; // Start
+
+        case SDLK_RIGHT: bit = 0; isDir = true; break;  // Right
+        case SDLK_LEFT:  bit = 1; isDir = true; break;  // Left
+        case SDLK_UP:    bit = 2; isDir = true; break;  // Up
+        case SDLK_DOWN:  bit = 3; isDir = true; break;  // Down
+    }
+
+    if (bit != 255) {
+        uint8_t& buttons = isDir ? motherboard.joypad.dirButtons : motherboard.joypad.actionButtons;
+
+        bool wasPressed = ((buttons & (1 << bit)) == 0);
+
+        if (isDown) {
+            buttons &= ~(1 << bit);
+            if (!wasPressed) {
+                motherboard.requestInterrupt(4);
+            }
+        } else {
+            buttons |= (1 << bit);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     std::string filePath = "tetris.gb";
     ROM rom(filePath);
@@ -44,6 +77,10 @@ int main(int argc, char* argv[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 isRunning = false;
+            }
+
+            if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+                handleKeyboard(event, motherboard);
             }
         }
 
