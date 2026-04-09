@@ -3,14 +3,11 @@
 #include <array>
 #include <sys/types.h>
 
-
 constexpr int SCREEN_HEIGHT = 144;
 constexpr int SCREEN_WIDTH = 160;
 constexpr int V_BLANK = 10;
 
-
 class PPU {
-
 private:
     uint8_t ly;
     uint16_t scanlineCounter;
@@ -28,11 +25,12 @@ private:
     std::array<uint8_t, 8192> vram;
     std::array<uint8_t, 160> oam;
 
-
     uint8_t returnNewStatMode();
     bool updateStat();
 
     void drawScanline();
+    void drawBackground();
+    void drawSprites();
 
     uint32_t colors[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
 
