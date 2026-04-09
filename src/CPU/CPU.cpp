@@ -1627,8 +1627,7 @@ uint8_t CPU::decode(uint8_t opCode){
 
         case 0xCB: {
             uint8_t cbOpcode = this->getNextByte();
-
-            cycles = 4 + this->decodePrefix(cbOpcode);
+            cycles = this->decodePrefix(cbOpcode);
             break;
         }
 
