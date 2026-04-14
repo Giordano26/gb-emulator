@@ -6,7 +6,15 @@
 class ROM {
 private:
     std::vector<uint8_t> romData;
+    std::vector<uint8_t> ramData;
     std::string file;
+    std::string saveFilePath;
+
+    uint8_t cartType;
+    uint32_t romBank;
+    uint32_t ramBank;
+    bool ramEnabled;
+    bool bankingMode;
 
 public:
     ROM(std::string filePath);

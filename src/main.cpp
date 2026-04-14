@@ -42,7 +42,7 @@ void handleKeyboard(SDL_Event& event, MMU& motherboard) {
 }
 
 int main(int argc, char* argv[]) {
-    std::string filePath = "tetris.gb";
+    std::string filePath = (argc > 1) ? argv[1] : "tetris.gb";
     ROM rom(filePath);
     MMU motherboard(&rom);
     CPU cpu(&motherboard);

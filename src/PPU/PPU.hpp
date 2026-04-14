@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <array>
 #include <sys/types.h>
+#include <vector>
 
 constexpr int SCREEN_HEIGHT = 144;
 constexpr int SCREEN_WIDTH = 160;
@@ -19,6 +20,9 @@ private:
     uint8_t scy;
     uint8_t scx;
 
+    uint8_t wy;
+    uint8_t wx;
+
     uint8_t obp0;
     uint8_t obp1;
 
@@ -30,9 +34,18 @@ private:
 
     void drawScanline();
     void drawBackground();
+    void drawWindow();
     void drawSprites();
 
     uint32_t colors[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+
+    uint8_t bgScanLineColors[160] = {0};
+
+    struct Sprite {
+        int index;
+        int xPos;
+    };
+
 
 public:
     PPU();

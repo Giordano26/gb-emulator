@@ -1,5 +1,7 @@
 #include "PPU/PPU.hpp"
 #include <cstdint>
+#include <sys/types.h>
+#include <algorithm>
 
 PPU::PPU(){
     this->oam.fill(0);
@@ -15,6 +17,8 @@ PPU::PPU(){
     this->obp1 = 0xFF;
     this->scy = 0;
     this->scx = 0;
+    this->wy = 0;
+    this->wx = 0;
 }
 
 uint8_t PPU::returnNewStatMode(){
@@ -96,7 +100,13 @@ void PPU::drawScanline() {
     } else {
         for (int pixel = 0; pixel < SCREEN_WIDTH; pixel++) {
             this->frameBuffer[this->ly * SCREEN_WIDTH + pixel] = this->colors[0];
+            this->bgScanLineColors[pixel] = 0;
         }
+    }
+
+    bool windowEnabled = (this->lcdc & (1 << 5)) != 0;
+    if(windowEnabled && this->ly >= this->wy){
+        this->drawWindow();
     }
 
     bool spritesEnabled = (this->lcdc & (1 << 1)) != 0;
@@ -137,6 +147,8 @@ void PPU::drawBackground() {
         uint8_t colorBit2 = (data2 >> colorBit) & 0x01;
         uint8_t colorID = (colorBit2 << 1) | colorBit1;
 
+        this->bgScanLineColors[pixel] = colorID;
+
         uint8_t realColor = (this->bgp >> (colorID * 2)) & 0x03;
         this->frameBuffer[this->ly * SCREEN_WIDTH + pixel] = this->colors[realColor];
     }
@@ -144,56 +156,127 @@ void PPU::drawBackground() {
 
 void PPU::drawSprites() {
     int spriteHeight = (this->lcdc & (1 << 2)) != 0 ? 16 : 8;
+    std::vector<Sprite> spritesLoaded;
 
     for (int i = 0; i < 40; i++) {
+        Sprite sprite;
         uint8_t index = i * 4;
 
         int yPos = this->oam[index] - 16;
         int xPos = this->oam[index + 1] - 8;
-        uint8_t tileLocation = this->oam[index + 2];
-        uint8_t attributes = this->oam[index + 3];
+
+        sprite.index = index;
+        sprite.xPos = xPos;
+
+        if (this->ly >= yPos && this->ly < (yPos + spriteHeight)) {
+            spritesLoaded.push_back(sprite);
+            if(spritesLoaded.size() == 10) break;
+        }
+    }
+
+    std::sort(spritesLoaded.begin(), spritesLoaded.end(), [](const Sprite& a, const Sprite& b) {
+            if (a.xPos != b.xPos) {
+                return a.xPos > b.xPos;
+            }
+            return a.index > b.index;
+    });
+
+    for(uint spriteIndex = 0; spriteIndex < spritesLoaded.size(); spriteIndex++){
+        int originalIndex = spritesLoaded[spriteIndex].index;
+
+        int yPos = this->oam[originalIndex] - 16;
+        int xPos = this->oam[originalIndex + 1] - 8;
+
+        uint8_t tileLocation = this->oam[originalIndex + 2];
+        uint8_t attributes = this->oam[originalIndex + 3];
 
         bool yFlip = (attributes & (1 << 6)) != 0;
         bool xFlip = (attributes & (1 << 5)) != 0;
 
-        if (this->ly >= yPos && this->ly < (yPos + spriteHeight)) {
-            int line = this->ly - yPos;
+        bool objBehindBG = (attributes & (1 << 7)) != 0;
 
-            if (yFlip) {
-                line = (spriteHeight - 1) - line;
-            }
+        int line = this->ly - yPos;
 
-            if (spriteHeight == 16) {
-                tileLocation = tileLocation & 0xFE;
-            }
-
-            uint16_t dataAddress = 0x8000 + (tileLocation * 16) + (line * 2);
-            uint8_t data1 = this->vram[dataAddress - 0x8000];
-            uint8_t data2 = this->vram[dataAddress + 1 - 0x8000];
-
-            for (int tilePixel = 7; tilePixel >= 0; tilePixel--) {
-                int colorBit = tilePixel;
-
-                if (xFlip) {
-                    colorBit = 7 - colorBit;
-                }
-
-                uint8_t colorBit1 = (data1 >> colorBit) & 0x01;
-                uint8_t colorBit2 = (data2 >> colorBit) & 0x01;
-                uint8_t colorID = (colorBit2 << 1) | colorBit1;
-
-                if (colorID == 0) continue;
-
-                uint8_t palette = (attributes & (1 << 4)) != 0 ? this->obp1 : this->obp0;
-                uint8_t realColor = (palette >> (colorID * 2)) & 0x03;
-
-                int xPix = xPos + (7 - tilePixel);
-
-                if (xPix >= 0 && xPix < SCREEN_WIDTH) {
-                    this->frameBuffer[this->ly * SCREEN_WIDTH + xPix] = this->colors[realColor];
-                }
-            }
+        if (yFlip) {
+            line = (spriteHeight - 1) - line;
         }
+
+        if (spriteHeight == 16) {
+            tileLocation = tileLocation & 0xFE;
+        }
+
+        uint16_t dataAddress = 0x8000 + (tileLocation * 16) + (line * 2);
+        uint8_t data1 = this->vram[dataAddress - 0x8000];
+        uint8_t data2 = this->vram[dataAddress + 1 - 0x8000];
+
+        for (int tilePixel = 7; tilePixel >= 0; tilePixel--) {
+            int colorBit = tilePixel;
+
+            if (xFlip) {
+                colorBit = 7 - colorBit;
+            }
+
+            uint8_t colorBit1 = (data1 >> colorBit) & 0x01;
+            uint8_t colorBit2 = (data2 >> colorBit) & 0x01;
+            uint8_t colorID = (colorBit2 << 1) | colorBit1;
+
+            if (colorID == 0) continue;
+
+            int xPix = xPos + (7 - tilePixel);
+
+            if (xPix < 0 || xPix >= SCREEN_WIDTH) continue;
+            if (objBehindBG && bgScanLineColors[xPix] != 0) continue;
+
+            uint8_t palette = (attributes & (1 << 4)) != 0 ? this->obp1 : this->obp0;
+            uint8_t realColor = (palette >> (colorID * 2)) & 0x03;
+
+
+            this->frameBuffer[this->ly * SCREEN_WIDTH + xPix] = this->colors[realColor];
+        }
+    }
+}
+
+void PPU::drawWindow() {
+    uint16_t tileMap = (this->lcdc & (1 << 6)) != 0 ? 0x9C00 : 0x9800;
+    uint16_t tileData = (this->lcdc & (1 << 4)) != 0 ? 0x8000 : 0x8800;
+    bool isUnsigned = (tileData == 0x8000);
+
+    int windowX = this->wx - 7;
+
+    uint8_t yPos = this->ly - this->wy;
+    uint16_t tileRow = (yPos / 8) * 32;
+
+    for (int pixel = 0; pixel < SCREEN_WIDTH; pixel++) {
+        if (pixel < windowX) continue;
+
+        uint8_t xPos = pixel - windowX;
+        uint16_t tileCol = (xPos / 8);
+
+        uint16_t tileAddress = tileMap + tileRow + tileCol;
+        uint8_t tileID = this->vram[tileAddress - 0x8000];
+
+        uint16_t tileDataLocation;
+        if (isUnsigned) {
+            tileDataLocation = tileData + (tileID * 16);
+        } else {
+            int8_t signedID = (int8_t)tileID;
+            tileDataLocation = 0x9000 + (signedID * 16);
+        }
+
+        uint8_t line = yPos % 8;
+        uint8_t data1 = this->vram[(tileDataLocation + (line * 2)) - 0x8000];
+        uint8_t data2 = this->vram[(tileDataLocation + (line * 2) + 1) - 0x8000];
+
+        int colorBit = 7 - (xPos % 8);
+        uint8_t colorBit1 = (data1 >> colorBit) & 0x01;
+        uint8_t colorBit2 = (data2 >> colorBit) & 0x01;
+        uint8_t colorID = (colorBit2 << 1) | colorBit1;
+
+        this->bgScanLineColors[pixel] = colorID;
+
+        uint8_t realColor = (this->bgp >> (colorID * 2)) & 0x03;
+
+        this->frameBuffer[this->ly * SCREEN_WIDTH + pixel] = this->colors[realColor];
     }
 }
 
@@ -217,6 +300,8 @@ uint8_t PPU::read(uint16_t address) {
         case 0xFF47: return this->bgp;
         case 0xFF48: return this->obp0;
         case 0xFF49: return this->obp1;
+        case 0xFF4A: return this->wy;
+        case 0xFF4B: return this->wx;
     }
 
     return 0xFF;
@@ -245,6 +330,8 @@ void PPU::write(uint16_t address, uint8_t value) {
         case 0xFF47: this->bgp = value; break;
         case 0xFF48: this->obp0 = value; break;
         case 0xFF49: this->obp1 = value; break;
+        case 0xFF4A: this->wy = value; break;
+        case 0xFF4B: this->wx = value; break;
     }
 
 }
